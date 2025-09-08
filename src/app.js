@@ -2,25 +2,25 @@ const express = require("express")
 
 const app = express();
 
-app.get("/", (req, res)=>{
-    res.send("Hello World!")
+app.get("/user", [(req, res, next)=>{
+    next()
+}, (req, res, next) => {
+    next()
+}], (req, res) => {
+    res.send("Yooo bro 3")
 })
 
-app.get("/user", (req, res)=>{
-    res.send({name:" John", age: 35})
-})
+// app.post("/user", (req, res) => {
+//     res.send("User created")
+// })
 
-app.post("/user", (req, res) => {
-    res.send("User created")
-})
+// app.put("/user", (req, res)=>{
+//     res.send("User updated")
+// })
 
-app.put("/user", (req, res)=>{
-    res.send("User updated")
-})
-
-app.delete("/user", (req, res) => {
-    res.send("User deleted")
-})
+// app.delete("/user", (req, res) => {
+//     res.send("User deleted")
+// })
 
 // app.use("/test/2", (req, res)=>{
 //     res.send("This is a test 2222 route")
