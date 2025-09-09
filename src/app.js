@@ -2,13 +2,45 @@ const express = require("express")
 
 const app = express();
 
-app.get("/user", [(req, res, next)=>{
-    next()
-}, (req, res, next) => {
-    next()
-}], (req, res) => {
-    res.send("Yooo bro 3")
+const {authAdmin, authUser} = require("./middlewares/auth");
+
+app.use("/admin", authAdmin);
+
+app.get("/error", (req, res) => {
+    
+        throw new Error("This is a custom error")
+    // try {
+    //     res.send("This is error route")
+    // } catch (error) {
+    //     res.status(500).send("Internal server error")
+    // }
 })
+
+app.get("/admin/getAllData", (req, res)=>{
+    res.send("All data from admin")
+})
+
+app.delete("/admin/deleteUser", (req,res)=>{
+    res.send("User deleted by admin")
+})
+
+app.get("/user", authUser, (req, res)=>{
+    res.send("Yooo bro")
+})
+
+app.use("/", (err, req, res, next) => {
+    if (err){
+        res.status(500).send("Internal server error")
+    }
+})
+
+// app.get("/user", [(req, res, next)=>{
+//     next()
+// }, (req, res, next) => {
+//     next()
+// }], (req, res) => {
+//     res.send("Yooo bro 3")
+// })
 
 // app.post("/user", (req, res) => {
 //     res.send("User created")
