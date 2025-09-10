@@ -1,38 +1,118 @@
-const express = require("express")
+const express = require("express");
+const User = require("./models/user");
 
 const app = express();
 
-const {authAdmin, authUser} = require("./middlewares/auth");
+const connectDB = require("./config/database");
 
-app.use("/admin", authAdmin);
+app.use(express.json());
 
-app.get("/error", (req, res) => {
-    
-        throw new Error("This is a custom error")
-    // try {
-    //     res.send("This is error route")
-    // } catch (error) {
-    //     res.status(500).send("Internal server error")
-    // }
-})
+app.get("/user", async (req, res)=>{
+    const userEmail = req.body.email;
 
-app.get("/admin/getAllData", (req, res)=>{
-    res.send("All data from admin")
-})
-
-app.delete("/admin/deleteUser", (req,res)=>{
-    res.send("User deleted by admin")
-})
-
-app.get("/user", authUser, (req, res)=>{
-    res.send("Yooo bro")
-})
-
-app.use("/", (err, req, res, next) => {
-    if (err){
-        res.status(500).send("Internal server error")
+    try {
+        const user = await User.find({email: userEmail});
+        if (!user){
+            res.status(404).send("User not found");
+        }
+        else{
+            res.send(user);
+        }
+    } catch (error) {
+        res.status(400).send("Error in fetching user");
     }
 })
+
+app.get("/feed", async (req, res)=>{
+    try {
+        const users = await User.find({});
+        if (!users){
+            res.status(404).send("No users found");
+        }else{
+            res.send(users);
+        }
+    } catch (error) {
+        res.status(400).send("Error in fetching feed");
+    }
+})
+
+app.post("/signup", async (req, res) => {
+    // const userObj = {firstName: "Ali", lastName: "Ahmad", age:"22", email: "ali@ahmad.com", password: "12345"}
+
+    const user = new User(req.body);
+
+    try {
+        await user.save();
+        res.send("User created successfully");
+    } catch (error) {
+        res.status(400).send("Error in creating user");
+    }
+})
+
+app.delete("/user", async (req, res)=>{
+    const userId = req.body.userId;
+
+    try {
+        const user = await User.findByIdAndDelete(userId);
+        console.log(user);
+        res.send("User deleted successfully");
+    } catch (error) {
+        res.status(400).send("Error in deleting user");
+    }
+})
+
+app.patch("/user", async (req, res) => {
+    const userEmail = req.body.email;
+    const body = req.body;
+
+    try {
+        const user = await User.findOneAndUpdate({email: userEmail}, body);
+        res.send("User updated successfully");
+    } catch (error) {
+        res.status(400).send("Error in updating user");
+    }
+})
+
+connectDB().then(()=>{
+    console.log("Connected to the database");
+    app.listen(7777, ()=>{
+    console.log("Server is running on port 7777")
+})
+}).catch((err)=>{
+    console.log("failed to connect to the database")
+});
+
+// const {authAdmin, authUser} = require("./middlewares/auth");
+
+// app.use("/admin", authAdmin);
+
+// app.get("/error", (req, res) => {
+    
+//         throw new Error("This is a custom error")
+//     // try {
+//     //     res.send("This is error route")
+//     // } catch (error) {
+//     //     res.status(500).send("Internal server error")
+//     // }
+// })
+
+// app.get("/admin/getAllData", (req, res)=>{
+//     res.send("All data from admin")
+// })
+
+// app.delete("/admin/deleteUser", (req,res)=>{
+//     res.send("User deleted by admin")
+// })
+
+// app.get("/user", authUser, (req, res)=>{
+//     res.send("Yooo bro")
+// })
+
+// app.use("/", (err, req, res, next) => {
+//     if (err){
+//         res.status(500).send("Internal server error")
+//     }
+// })
 
 // app.get("/user", [(req, res, next)=>{
 //     next()
@@ -70,6 +150,3 @@ app.use("/", (err, req, res, next) => {
 //     res.send("Hello from /hello route")
 // })
 
-app.listen(7777, ()=>{
-    console.log("Server is running on port 7777")
-})
