@@ -1,5 +1,7 @@
 const express = require("express");
 const User = require("./models/user");
+const signUpValidation = require("./utils/signUp");
+const bcrypt = require("bcrypt");
 
 const app = express();
 
@@ -7,146 +9,122 @@ const connectDB = require("./config/database");
 
 app.use(express.json());
 
-app.get("/user", async (req, res)=>{
-    const userEmail = req.body.email;
+app.get("/user", async (req, res) => {
+  const userEmail = req.body.email;
 
-    try {
-        const user = await User.find({email: userEmail});
-        if (!user){
-            res.status(404).send("User not found");
-        }
-        else{
-            res.send(user);
-        }
-    } catch (error) {
-        res.status(400).send("Error in fetching user");
+  try {
+    const user = await User.find({ email: userEmail });
+    if (!user) {
+      res.status(404).send("User not found");
+    } else {
+      res.send(user);
     }
-})
-
-app.get("/feed", async (req, res)=>{
-    try {
-        const users = await User.find({});
-        if (!users){
-            res.status(404).send("No users found");
-        }else{
-            res.send(users);
-        }
-    } catch (error) {
-        res.status(400).send("Error in fetching feed");
-    }
-})
-
-app.post("/signup", async (req, res) => {
-    // const userObj = {firstName: "Ali", lastName: "Ahmad", age:"22", email: "ali@ahmad.com", password: "12345"}
-
-    const user = new User(req.body);
-
-    try {
-        await user.save();
-        res.send("User created successfully");
-    } catch (error) {
-        res.status(400).send("Error in creating user");
-    }
-})
-
-app.delete("/user", async (req, res)=>{
-    const userId = req.body.userId;
-
-    try {
-        const user = await User.findByIdAndDelete(userId);
-        console.log(user);
-        res.send("User deleted successfully");
-    } catch (error) {
-        res.status(400).send("Error in deleting user");
-    }
-})
-
-app.patch("/user", async (req, res) => {
-    const userEmail = req.body.email;
-    const body = req.body;
-
-    try {
-        const user = await User.findOneAndUpdate({email: userEmail}, body);
-        res.send("User updated successfully");
-    } catch (error) {
-        res.status(400).send("Error in updating user");
-    }
-})
-
-connectDB().then(()=>{
-    console.log("Connected to the database");
-    app.listen(7777, ()=>{
-    console.log("Server is running on port 7777")
-})
-}).catch((err)=>{
-    console.log("failed to connect to the database")
+  } catch (error) {
+    res.status(400).send("Error in fetching user");
+  }
 });
 
-// const {authAdmin, authUser} = require("./middlewares/auth");
+app.get("/feed", async (req, res) => {
+  try {
+    const users = await User.find({});
+    if (!users) {
+      res.status(404).send("No users found");
+    } else {
+      res.send(users);
+    }
+  } catch (error) {
+    res.status(400).send("Error in fetching feed");
+  }
+});
 
-// app.use("/admin", authAdmin);
+app.post("/signup", async (req, res) => {
+  // const userObj = {firstName: "Ali", lastName: "Ahmad", age:"22", email: "ali@ahmad.com", password: "12345"}
 
-// app.get("/error", (req, res) => {
-    
-//         throw new Error("This is a custom error")
-//     // try {
-//     //     res.send("This is error route")
-//     // } catch (error) {
-//     //     res.status(500).send("Internal server error")
-//     // }
-// })
+  const { firstName, lastName, email, password } = req.body;
 
-// app.get("/admin/getAllData", (req, res)=>{
-//     res.send("All data from admin")
-// })
+  try {
+    signUpValidation(req);
 
-// app.delete("/admin/deleteUser", (req,res)=>{
-//     res.send("User deleted by admin")
-// })
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = new User({
+      firstName,
+      lastName,
+      email,
+      password: passwordHash,
+    });
+    await user.save();
+    res.send("User created successfully");
+  } catch (error) {
+    res.status(400).send("Error in creating user:" + error.message);
+  }
+});
 
-// app.get("/user", authUser, (req, res)=>{
-//     res.send("Yooo bro")
-// })
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
 
-// app.use("/", (err, req, res, next) => {
-//     if (err){
-//         res.status(500).send("Internal server error")
-//     }
-// })
+  try {
+    const user = await User.findOne({ email });
 
-// app.get("/user", [(req, res, next)=>{
-//     next()
-// }, (req, res, next) => {
-//     next()
-// }], (req, res) => {
-//     res.send("Yooo bro 3")
-// })
+    if (!user) {
+      return res.status(400).send("Invalid email or password");
+    }
 
-// app.post("/user", (req, res) => {
-//     res.send("User created")
-// })
+    if (!user.password) {
+      return res.status(400).send("No password found for this user.");
+    }
 
-// app.put("/user", (req, res)=>{
-//     res.send("User updated")
-// })
+    const isMatch = await bcrypt.compare(password, user.password);
 
-// app.delete("/user", (req, res) => {
-//     res.send("User deleted")
-// })
+    if (!isMatch) {
+      return res.status(400).send("Invalid email or password");
+    }
 
-// app.use("/test/2", (req, res)=>{
-//     res.send("This is a test 2222 route")
-// })
+    res.send("User logged in successfully");
 
-// app.use("/test", (req, res)=>{
-//     res.send("This is a test route")
-// })
+  } catch (error) {
+    res.status(500).send("Error logging in: " + error.message);
+  }
+});
 
-// app.use("/hello/2", (req, res)=>{
-//     res.send("Hello from /hello 2222 route")
-// })
 
-// app.use("/hello", (req, res)=>{
-//     res.send("Hello from /hello route")
-// })
+app.delete("/user", async (req, res) => {
+  const userId = req.body.userId;
 
+  try {
+    const user = await User.findOneAndDelete(userId);
+    console.log(user);
+    res.send("User deleted successfully");
+  } catch (error) {
+    res.status(400).send("Error in deleting user");
+  }
+});
+
+app.patch("/user", async (req, res) => {
+  const userEmail = req.body.email;
+  const body = req.body;
+
+  try {
+    const allowedFields = ["lastName", "password", "skills", "bio"];
+    const isAllowed = Object.keys(body).every((field) =>
+      allowedFields.includes(field)
+    );
+    if (!isAllowed) {
+      throw new Error("Invalid updates!");
+    }
+    const user = await User.findOneAndUpdate({ email: userEmail }, body);
+    res.send("User updated successfully");
+  } catch (error) {
+    res.status(400).send("Error in updating user");
+  }
+});
+
+connectDB()
+  .then(() => {
+    console.log("Connected to the database");
+    app.listen(7777, () => {
+      console.log("Server is running on port 7777");
+    });
+  })
+  .catch((err) => {
+    console.log("failed to connect to the database");
+  });
