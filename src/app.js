@@ -2,12 +2,15 @@ const express = require("express");
 const User = require("./models/user");
 const signUpValidation = require("./utils/signUp");
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 
 const connectDB = require("./config/database");
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/user", async (req, res) => {
   const userEmail = req.body.email;
@@ -75,17 +78,37 @@ app.post("/login", async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
 
+    const token = await jwt.sign({ _id: user._id }, "Secret");
+    res.cookie("token", token);
+
     if (!isMatch) {
       return res.status(400).send("Invalid email or password");
     }
 
     res.send("User logged in successfully");
-
   } catch (error) {
     res.status(500).send("Error logging in: " + error.message);
   }
 });
 
+app.get("/profile", async (req, res) => {
+  try {
+    const { token } = req.cookies;
+    if (!token) {
+      throw new Error("No token provided");
+    }
+
+    const decoded = jwt.verify(token, "Secret");
+    const { _id } = decoded;
+    const user = await User.findById(_id);
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+    res.send(user);
+  } catch (error) {
+    res.status(401).send("Unauthorized: No token provided");
+  }
+});
 
 app.delete("/user", async (req, res) => {
   const userId = req.body.userId;
