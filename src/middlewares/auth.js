@@ -1,3 +1,6 @@
+const jwt = require("jsonwebtoken");
+const User = require("../models/user");
+
 const authAdmin = (req, res, next) =>{
     const token = "thisIsToken";
     const isAdmin = token === "thisIsToken";
@@ -9,14 +12,23 @@ const authAdmin = (req, res, next) =>{
     }
 }
 
-const authUser = (req, res, next) => {
-    const token = "thisIsToken";
-    const isUser = token === "thisIsToken";
-    if( isUser){
-        next();
+const authUser = async (req, res, next) => {
+
+    try {
+    const token = req.cookies.token;
+    if (!token) {
+        return res.status(401).send("Unauthorized: No token provided");
     }
-    else{
-        res.status(401).send("Unauthorized");
+
+    const decoded = jwt.verify(token, "Secret");
+    const {_id} = decoded;
+
+    const user = await User.findById(_id);
+    req.user = user;
+    next();
+        
+    } catch (error) {
+        res.status(401).send("Unauthorized: Invalid token");
     }
 }
 

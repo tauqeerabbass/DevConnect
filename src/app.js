@@ -4,6 +4,8 @@ const signUpValidation = require("./utils/signUp");
 const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
+const { authUser } = require("./middlewares/auth");
+const {getJWT, validatePassword} = require("./models/user");
 
 const app = express();
 
@@ -63,9 +65,9 @@ app.post("/signup", async (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
   try {
+    const { email, password } = req.body;
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -76,14 +78,18 @@ app.post("/login", async (req, res) => {
       return res.status(400).send("No password found for this user.");
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    const token = await jwt.sign({ _id: user._id }, "Secret");
-    res.cookie("token", token);
+    const isMatch = await user.validatePassword(password);
 
     if (!isMatch) {
       return res.status(400).send("Invalid email or password");
     }
+
+    const token = user.getJWT(); // no need for await
+
+    res.cookie("token", token, {
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      httpOnly: true,
+    });
 
     res.send("User logged in successfully");
   } catch (error) {
@@ -91,22 +97,22 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.get("/profile", async (req, res) => {
-  try {
-    const { token } = req.cookies;
-    if (!token) {
-      throw new Error("No token provided");
-    }
 
-    const decoded = jwt.verify(token, "Secret");
-    const { _id } = decoded;
-    const user = await User.findById(_id);
-    if (!user) {
-      return res.status(404).send("User not found");
-    }
+app.get("/profile", authUser, async (req, res) => {
+  try {
+    const user = req.user;
     res.send(user);
   } catch (error) {
     res.status(401).send("Unauthorized: No token provided");
+  }
+});
+
+app.post("/sendConnectionRequest", authUser, async (req, res) => {
+  try {
+    console.log("Connection request sent");
+    res.send("Connection request sent");
+  } catch (error) {
+    res.status(500).send("Error sending connection request: " + error.message);
   }
 });
 
