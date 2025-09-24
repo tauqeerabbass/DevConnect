@@ -58,6 +58,10 @@ const userSchema = new mongoose.Schema({
     bio: {
         type: String,
         default: "Software Engineer"
+    },
+    photoUrl: {
+        type: String,
+        default: "https://static.vecteezy.com/system/resources/previews/058/338/462/non_2x/generic-profile-picture-placeholder-default-user-profile-image-vector.jpg"
     }
 },
 {
